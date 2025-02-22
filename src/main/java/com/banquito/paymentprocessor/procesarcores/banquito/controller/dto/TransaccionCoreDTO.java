@@ -1,7 +1,7 @@
 package com.banquito.paymentprocessor.procesarcores.banquito.controller.dto;
 
 import java.math.BigDecimal;
-import java.util.Date;
+import java.time.LocalDateTime;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
@@ -20,23 +20,27 @@ public class TransaccionCoreDTO {
     @Size(min = 16, max = 16, message = "El número de tarjeta debe tener 16 dígitos")
     private String numeroTarjeta;
 
+    @NotNull(message = "El CVV es requerido")
+    @Size(min = 3, max = 4, message = "El CVV debe tener entre 3 y 4 dígitos")
+    private String cvv;
+
     @NotNull(message = "La fecha de caducidad es requerida")
-    private Date fechaCaducidad;
+    private LocalDateTime fechaCaducidad;
 
     @NotNull(message = "El monto es requerido")
     private BigDecimal monto;
 
-    @NotBlank(message = "El código de moneda es requerido")
-    @Size(min = 3, max = 3, message = "El código de moneda debe tener 3 caracteres")
-    private String codigoMoneda;
+    @NotBlank(message = "El código único es requerido")
+    @Size(max = 64, message = "El código único no puede exceder los 64 caracteres")
+    private String codigoUnico;
 
-    @NotBlank(message = "La marca es requerida")
-    @Pattern(regexp = "VISA|MASTERCARD", message = "La marca debe ser VISA o MASTERCARD")
-    private String marca;
+    @NotBlank(message = "El tipo es requerido")
+    @Pattern(regexp = "CORRIENTE|DIFERIDA|RECURRENTE", message = "El tipo debe ser CORRIENTE, DIFERIDA o RECURRENTE")
+    private String tipo;
 
     @NotBlank(message = "El SWIFT del banco es requerido")
     @Size(min = 8, max = 11, message = "El SWIFT del banco debe tener entre 8 y 11 caracteres")
-    private String swiftBancoTarjeta;
+    private String swiftBanco;
 
     @NotBlank(message = "El SWIFT del banco de comercio es requerido")
     @Size(min = 8, max = 11, message = "El SWIFT del banco de comercio debe tener entre 8 y 11 caracteres")
@@ -49,4 +53,13 @@ public class TransaccionCoreDTO {
     @NotBlank(message = "La referencia es requerida")
     @Size(max = 50, message = "La referencia no puede exceder los 50 caracteres")
     private String referencia;
+
+    @Schema(description = "Código gateway para transacciones diferidas", required = false)
+    private String codigoGateway;
+
+    @Schema(description = "Meses diferidos para transacciones diferidas", required = false)
+    private Integer mesesDiferido;
+
+    @Schema(description = "Tipo diferido para transacciones diferidas", required = false)
+    private String tipoDiferido;
 } 

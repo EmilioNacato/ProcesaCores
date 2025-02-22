@@ -31,11 +31,14 @@ public class ProcesarCoreController {
     }
 
     @PostMapping("/procesar")
-    @Operation(summary = "Procesa una transacción en el core bancario")
+    @Operation(summary = "Procesa una transacción en el core bancario", 
+              description = "Procesa la transacción tanto para la tarjeta como para el comercio. " +
+                          "La transacción solo se considera exitosa si ambos procesos son completados.")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Transacción procesada exitosamente"),
+        @ApiResponse(responseCode = "200", description = "Transacción procesada exitosamente en ambos cores"),
         @ApiResponse(responseCode = "400", description = "Datos de la transacción inválidos"),
-        @ApiResponse(responseCode = "500", description = "Error al procesar la transacción")
+        @ApiResponse(responseCode = "422", description = "Error en el procesamiento de la transacción"),
+        @ApiResponse(responseCode = "500", description = "Error interno del servidor")
     })
     public ResponseEntity<Void> procesarTransaccion(@Valid @RequestBody TransaccionCoreDTO transaccion) {
         try {
@@ -50,6 +53,9 @@ public class ProcesarCoreController {
             return ResponseEntity.ok().build();
         } catch (CoreProcessingException e) {
             log.error("Error al procesar la transacción: {}", e.getMessage());
+            return ResponseEntity.unprocessableEntity().build();
+        } catch (Exception e) {
+            log.error("Error interno al procesar la transacción: {}", e.getMessage());
             return ResponseEntity.internalServerError().build();
         }
     }
