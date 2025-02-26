@@ -3,6 +3,7 @@ package com.banquito.paymentprocessor.procesarcores.banquito.service;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Value;
 
 import com.banquito.paymentprocessor.procesarcores.banquito.client.CoreBancarioClient;
 import com.banquito.paymentprocessor.procesarcores.banquito.client.dto.TarjetaRequestDTO;
@@ -13,9 +14,12 @@ import com.banquito.paymentprocessor.procesarcores.banquito.exception.CoreProces
 
 @Service
 public class ProcesarCoreService {
-    
+
     private static final Logger log = LoggerFactory.getLogger(ProcesarCoreService.class);
     private final CoreBancarioClient coreBancarioClient;
+
+    @Value("${core.timeout}")
+    private Integer coreTimeout;
 
     public ProcesarCoreService(CoreBancarioClient coreBancarioClient) {
         this.coreBancarioClient = coreBancarioClient;
@@ -23,39 +27,36 @@ public class ProcesarCoreService {
 
     public void procesarTransaccion(TransaccionCoreDTO transaccion) {
         try {
-            log.info("Iniciando procesamiento de transacción en el core para la referencia: {}", 
-                transaccion.getReferencia());
+            log.info("Iniciando procesamiento de transacción en el core para la referencia: {}", transaccion.getReferencia());
 
-            // Procesar transacción de tarjeta
-            log.info("Procesando transacción de tarjeta");
+            // Validación de la tarjeta
+            log.info("Procesando validación de tarjeta");
             TarjetaRequestDTO tarjetaRequest = convertirATarjetaRequest(transaccion);
-            CoreResponseDTO respuestaTarjeta = this.coreBancarioClient.procesarTransaccionTarjeta(tarjetaRequest);
-            
-            if (!respuestaTarjeta.getTransaccionExitosa()) {
-                log.error("Error en el procesamiento de la tarjeta: {}", respuestaTarjeta.getMensaje());
-                throw new CoreProcessingException("Error en el procesamiento de la tarjeta: " + 
-                    respuestaTarjeta.getMensaje(), transaccion.getReferencia());
-            }
-            log.info("Transacción de tarjeta procesada exitosamente");
+            CoreResponseDTO respuestaTarjeta = coreBancarioClient.procesarTransaccionTarjeta(tarjetaRequest);
 
-            // Procesar transacción de comercio
-            log.info("Procesando transacción de comercio");
-            ComercioRequestDTO comercioRequest = convertirAComercioRequest(transaccion);
-            CoreResponseDTO respuestaComercio = this.coreBancarioClient.procesarTransaccionComercio(comercioRequest);
-            
-            if (!respuestaComercio.getTransaccionExitosa()) {
-                log.error("Error en el procesamiento del comercio: {}", respuestaComercio.getMensaje());
-                throw new CoreProcessingException("Error en el procesamiento del comercio: " + 
-                    respuestaComercio.getMensaje(), transaccion.getReferencia());
+            if (!respuestaTarjeta.getTransaccionExitosa()) {
+                log.error("Error en la validación de la tarjeta: {}", respuestaTarjeta.getMensaje());
+                throw new CoreProcessingException("Error en la validación de la tarjeta: " + respuestaTarjeta.getMensaje(), transaccion.getReferencia());
             }
-            log.info("Transacción de comercio procesada exitosamente");
-            
-            log.info("Transacción procesada exitosamente en el core para la referencia: {}", 
-                transaccion.getReferencia());
+
+            log.info("Tarjeta validada exitosamente");
+
+            // ✅ Acreditación al comercio
+            log.info("Procesando acreditación al comercio");
+            ComercioRequestDTO comercioRequest = convertirAComercioRequest(transaccion);
+            CoreResponseDTO respuestaComercio = coreBancarioClient.procesarTransaccionComercio(comercioRequest);
+
+            if (!respuestaComercio.getTransaccionExitosa()) {
+                log.error("Error en la acreditación al comercio: {}", respuestaComercio.getMensaje());
+                throw new CoreProcessingException("Error en la acreditación al comercio: " + respuestaComercio.getMensaje(), transaccion.getReferencia());
+            }
+
+            log.info("Acreditación al comercio completada exitosamente");
+
+            log.info("Transacción procesada exitosamente en el core para la referencia: {}", transaccion.getReferencia());
         } catch (Exception e) {
             log.error("Error al procesar la transacción en el core: {}", e.getMessage());
-            throw new CoreProcessingException("Error al procesar la transacción en el core: " + e.getMessage(), 
-                transaccion.getReferencia());
+            throw new CoreProcessingException("Error al procesar la transacción en el core: " + e.getMessage(), transaccion.getReferencia());
         }
     }
 
@@ -85,4 +86,4 @@ public class ProcesarCoreService {
         request.setTipo(transaccion.getTipo());
         return request;
     }
-} 
+}
