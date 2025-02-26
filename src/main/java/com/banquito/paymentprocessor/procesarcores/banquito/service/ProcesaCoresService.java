@@ -8,6 +8,9 @@ import reactor.core.publisher.Mono;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import java.time.Duration;
+import com.banquito.paymentprocessor.procesarcores.banquito.dto.CoreResponse;
+import com.banquito.paymentprocessor.procesarcores.banquito.dto.TransaccionCoreDTO;
+import com.banquito.paymentprocessor.procesarcores.banquito.dto.TransaccionCoreResponseDTO;
 
 @Service
 @Slf4j
