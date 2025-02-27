@@ -1,24 +1,42 @@
 package com.banquito.paymentprocessor.procesarcores.banquito.config;
 
+import io.swagger.v3.oas.models.OpenAPI;
+import io.swagger.v3.oas.models.info.Contact;
+import io.swagger.v3.oas.models.info.Info;
+import io.swagger.v3.oas.models.info.License;
+import io.swagger.v3.oas.models.servers.Server;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-import io.swagger.v3.oas.models.OpenAPI;
-import io.swagger.v3.oas.models.info.Info;
-import io.swagger.v3.oas.models.info.License;
+import java.util.List;
 
 @Configuration
 public class OpenApiConfig {
 
     @Bean
-    public OpenAPI customOpenAPI() {
-        return new OpenAPI()
-            .info(new Info()
+    public OpenAPI openAPI() {
+        Server devServer = new Server()
+                .url("http://localhost:8080")
+                .description("Servidor de Desarrollo");
+
+        Contact contact = new Contact()
+                .name("Banquito")
+                .url("https://banquito.com")
+                .email("info@banquito.com");
+
+        License license = new License()
+                .name("Apache 2.0")
+                .url("http://www.apache.org/licenses/LICENSE-2.0.html");
+
+        Info info = new Info()
                 .title("API de Procesamiento de Cores")
                 .version("1.0")
-                .description("API para procesar transacciones en los cores bancarios")
-                .license(new License()
-                    .name("Apache 2.0")
-                    .url("http://springdoc.org")));
+                .contact(contact)
+                .description("API para el procesamiento de transacciones core del sistema de pagos")
+                .license(license);
+
+        return new OpenAPI()
+                .info(info)
+                .servers(List.of(devServer));
     }
 } 
