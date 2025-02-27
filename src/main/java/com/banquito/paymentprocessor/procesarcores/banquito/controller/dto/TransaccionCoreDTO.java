@@ -62,4 +62,8 @@ public class TransaccionCoreDTO {
 
     @Schema(description = "Tipo diferido para transacciones diferidas", required = false)
     private String tipoDiferido;
+
+    @Schema(description = "Código del comercio", required = true)
+    @NotBlank(message = "El código del comercio es requerido")
+    private String codigoComercio;
 } 

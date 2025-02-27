@@ -10,11 +10,9 @@ import org.springframework.web.reactive.function.client.WebClient;
 import com.banquito.paymentprocessor.procesarcores.banquito.client.CoreBancarioClient;
 import com.banquito.paymentprocessor.procesarcores.banquito.client.dto.TarjetaRequestDTO;
 import com.banquito.paymentprocessor.procesarcores.banquito.client.dto.ComercioRequestDTO;
-import com.banquito.paymentprocessor.procesarcores.banquito.client.dto.CoreResponseDTO;
-import com.banquito.paymentprocessor.procesarcores.banquito.dto.TransaccionCoreDTO;
-import com.banquito.paymentprocessor.procesarcores.banquito.exception.CoreProcessingException;
-import com.banquito.paymentprocessor.procesarcores.banquito.dto.CoreResponse;
-import com.banquito.paymentprocessor.procesarcores.banquito.dto.TransaccionCoreResponseDTO;
+import com.banquito.paymentprocessor.procesarcores.banquito.controller.dto.TransaccionCoreDTO;
+import com.banquito.paymentprocessor.procesarcores.banquito.controller.dto.CoreResponse;
+import com.banquito.paymentprocessor.procesarcores.banquito.controller.dto.TransaccionCoreResponseDTO;
 
 import reactor.core.publisher.Mono;
 import java.time.Duration;
@@ -133,8 +131,7 @@ public class ProcesarCoreService {
         TarjetaRequestDTO request = new TarjetaRequestDTO();
         request.setNumeroTarjeta(transaccion.getNumeroTarjeta());
         request.setCvv(transaccion.getCvv());
-        request.setFechaCaducidad(LocalDateTime.parse(transaccion.getFechaCaducidad(), 
-            DateTimeFormatter.ofPattern("MM/yy")));
+        request.setFechaCaducidad(transaccion.getFechaCaducidad());
         request.setMonto(transaccion.getMonto());
         request.setCodigoUnico(transaccion.getCodigoUnico());
         request.setTipo(transaccion.getTipo());

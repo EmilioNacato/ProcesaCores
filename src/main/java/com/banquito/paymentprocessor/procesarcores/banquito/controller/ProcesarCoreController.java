@@ -8,8 +8,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.banquito.paymentprocessor.procesarcores.banquito.dto.TransaccionCoreDTO;
-import com.banquito.paymentprocessor.procesarcores.banquito.dto.TransaccionCoreResponseDTO;
+import com.banquito.paymentprocessor.procesarcores.banquito.controller.dto.TransaccionCoreDTO;
 import com.banquito.paymentprocessor.procesarcores.banquito.exception.CoreProcessingException;
 import com.banquito.paymentprocessor.procesarcores.banquito.service.ProcesarCoreService;
 
