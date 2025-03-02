@@ -71,7 +71,7 @@ public class ProcesarCoreControllerTest {
         
         // Configurar comportamiento del mock
         when(service.procesarTransaccion(any(TransaccionCoreDTO.class)))
-            .thenThrow(new CoreProcessingException("Error en procesamiento del core", null));
+            .thenThrow(new CoreProcessingException("Error en procesamiento del core", (String)null));
         
         // Ejecutar y verificar
         mockMvc.perform(post("/api/v1/core/procesar")
