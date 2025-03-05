@@ -98,17 +98,25 @@ public class ProcesarCoreControllerTest {
     
     private TransaccionCoreDTO crearTransaccionDTOPrueba() {
         TransaccionCoreDTO dto = new TransaccionCoreDTO();
+        dto.setCodTransaccion("TRX123456");
+        dto.setCodigoUnico("UNIQUE123");
+        dto.setCodigoGtw("PAYPAL");
         dto.setNumeroTarjeta("4111111111111111");
         dto.setCvv("123");
-        dto.setFechaCaducidad(LocalDateTime.now().plusYears(2));
+        dto.setFechaCaducidad("12/25");
         dto.setMonto(new BigDecimal("100.00"));
-        dto.setCodigoUnico("UNIQUE123");
-        dto.setTipo("CORRIENTE");
-        dto.setSwiftBanco("BANQECAA");
+        dto.setCodigoMoneda("USD");
+        dto.setMarca("VISA");
+        dto.setEstado("PEN");
+        dto.setReferencia("REF123456");
+        dto.setPais("EC");
+        dto.setTipo("COM");
         dto.setSwiftBancoComercio("BANQECBB");
         dto.setCuentaIbanComercio("ES9121000418450200051332");
-        dto.setReferencia("REF123456");
-        dto.setCodigoComercio("COM001");
+        dto.setSwiftBancoTarjeta("BANQECAA");
+        dto.setTransaccionEncriptada("datos_encriptados");
+        dto.setDiferido(3);
+        dto.setCuotas(3);
         return dto;
     }
 } 

@@ -1,7 +1,6 @@
 package com.banquito.paymentprocessor.procesarcores.banquito.controller.dto;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.DecimalMin;
@@ -11,72 +10,72 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Data
+@Builder
 @NoArgsConstructor
-@Schema(description = "DTO para procesar una transacción a través del core bancario")
+@AllArgsConstructor
+@Schema(description = "DTO para la transferencia de datos de transacción al core bancario")
 public class TransaccionCoreDTO {
-
-    @NotBlank(message = "El número de tarjeta es obligatorio")
-    @Size(min = 15, max = 16, message = "El número de tarjeta debe tener entre 15 y 16 dígitos")
-    @Pattern(regexp = "^[0-9]+$", message = "El número de tarjeta debe contener solo dígitos")
-    @Schema(description = "Número de la tarjeta a debitar", example = "4557880123456789", required = true)
+    
+    @Schema(description = "Código único de la transacción", example = "TRX1234567", required = true)
+    private String codTransaccion;
+    
+    @Schema(description = "Código único para identificar la transacción", example = "TRANS20240301123456", required = true)
+    private String codigoUnico;
+    
+    @Schema(description = "Código del gateway que envía la transacción", example = "PAYPAL", required = true)
+    private String codigoGtw;
+    
+    @Schema(description = "Número de la tarjeta", example = "4532123456789012", required = true)
     private String numeroTarjeta;
     
-    @NotBlank(message = "El CVV es obligatorio")
-    @Size(min = 3, max = 4, message = "El CVV debe tener entre 3 y 4 dígitos")
-    @Pattern(regexp = "^[0-9]+$", message = "El CVV debe contener solo dígitos")
     @Schema(description = "Código de seguridad de la tarjeta", example = "123", required = true)
     private String cvv;
     
-    @NotNull(message = "La fecha de caducidad es obligatoria")
-    @Future(message = "La fecha de caducidad debe ser una fecha futura")
-    @Schema(description = "Fecha de caducidad de la tarjeta", required = true)
-    private LocalDateTime fechaCaducidad;
+    @Schema(description = "Fecha de caducidad de la tarjeta", example = "12/25", required = true)
+    private String fechaCaducidad;
     
-    @NotNull(message = "El monto es obligatorio")
-    @DecimalMin(value = "0.01", message = "El monto debe ser mayor a cero")
-    @Digits(integer = 12, fraction = 2, message = "El monto debe tener como máximo 12 dígitos enteros y 2 decimales")
-    @Schema(description = "Monto a procesar", example = "100.50", required = true)
+    @Schema(description = "Monto de la transacción", example = "100.50", required = true)
     private BigDecimal monto;
     
-    @NotBlank(message = "El código único es obligatorio")
-    @Size(max = 50, message = "El código único debe tener máximo 50 caracteres")
-    @Schema(description = "Código único para identificar la transacción", example = "TX123456789", required = true)
-    private String codigoUnico;
+    @Schema(description = "Código de moneda", example = "USD", required = false)
+    private String codigoMoneda;
     
-    @NotBlank(message = "El tipo de transacción es obligatorio")
-    @Schema(description = "Tipo de transacción (COMPRA, RETIRO, etc)", example = "COMPRA", required = true)
-    private String tipo;
+    @Schema(description = "Marca de la tarjeta", example = "VISA", required = false)
+    private String marca;
     
-    @NotBlank(message = "El código swift del banco es obligatorio")
-    @Schema(description = "Código SWIFT del banco emisor de la tarjeta", example = "BANECUXXXX", required = true)
-    private String swiftBanco;
+    @Schema(description = "Estado de la transacción", example = "PEN", required = false)
+    private String estado;
     
-    @NotBlank(message = "El código swift del banco del comercio es obligatorio")
-    @Schema(description = "Código SWIFT del banco del comercio", example = "PICHEQXX", required = true)
-    private String swiftBancoComercio;
-    
-    @NotBlank(message = "La cuenta IBAN del comercio es obligatoria")
-    @Schema(description = "Cuenta IBAN del comercio donde se acreditará el monto", 
-           example = "EC11 0000 0000 0123 4567 8901", required = true)
-    private String cuentaIbanComercio;
-    
-    @Schema(description = "Referencia de la transacción", example = "Compra en línea")
+    @Schema(description = "Referencia de la transacción", example = "Compra en línea", required = false)
     private String referencia;
     
-    @Schema(description = "Código asignado por el gateway de pago", example = "GW987654321")
-    private String codigoGateway;
+    @Schema(description = "País de origen de la transacción", example = "EC", required = false)
+    private String pais;
     
-    @Schema(description = "Meses del diferido (1-48)", example = "3")
-    private Integer mesesDiferido;
+    @Schema(description = "Tipo de transacción", example = "COM", required = true)
+    private String tipo;
     
-    @Schema(description = "Tipo de diferido (NORMAL, SIN_INTERESES)", example = "NORMAL")
-    private String tipoDiferido;
+    @Schema(description = "Código SWIFT del banco del comercio", example = "BANKECXXXX", required = false)
+    private String swiftBancoComercio;
     
-    @NotBlank(message = "El código del comercio es obligatorio")
-    @Schema(description = "Código del comercio", example = "COM123456", required = true)
-    private String codigoComercio;
+    @Schema(description = "Cuenta IBAN del comercio", example = "EC1234567890123456789012", required = false)
+    private String cuentaIbanComercio;
+    
+    @Schema(description = "Código SWIFT del banco emisor de la tarjeta", example = "BANKUS33XXX", required = false)
+    private String swiftBancoTarjeta;
+    
+    @Schema(description = "Datos encriptados de la transacción", required = false)
+    private String transaccionEncriptada;
+    
+    @Schema(description = "Número de meses para el diferido", example = "3", required = false)
+    private Integer diferido;
+    
+    @Schema(description = "Número de cuotas para el diferido", example = "3", required = false)
+    private Integer cuotas;
 } 

@@ -44,7 +44,7 @@ public class IntegracionCoreBancarioTest {
     
     @DynamicPropertySource
     static void configurarPropiedades(DynamicPropertyRegistry registry) {
-        registry.add("core.bancario.url", wireMockServer::baseUrl);
+        registry.add("app.core-bancario.url", wireMockServer::baseUrl);
     }
     
     @BeforeEach
@@ -56,42 +56,49 @@ public class IntegracionCoreBancarioTest {
     
     @Test
     public void procesarTransaccion_flujoExitoso() throws Exception {
-        CoreResponseDTO respuestaTarjeta = new CoreResponseDTO();
-        respuestaTarjeta.setTransaccionExitosa(true);
-        respuestaTarjeta.setCodigoAutorizacion("AUTH123");
-        respuestaTarjeta.setMensaje("Débito procesado correctamente");
-        respuestaTarjeta.setEstado("APROBADA");
+        CoreResponseDTO respuestaTarjeta = CoreResponseDTO.builder()
+                .estado("APROBADO")
+                .mensaje("Débito procesado correctamente")
+                .codigoRespuesta("00")
+                .codigoTransaccion("AUTH123")
+                .build();
         
-        wireMockServer.stubFor(WireMock.post(WireMock.urlEqualTo("/api/v1/transacciones/tarjeta"))
+        wireMockServer.stubFor(WireMock.post(WireMock.urlEqualTo("/v1/transacciones/tarjeta"))
                 .willReturn(WireMock.aResponse()
                         .withStatus(200)
                         .withHeader("Content-Type", "application/json")
                         .withBody(objectMapper.writeValueAsString(respuestaTarjeta))));
         
-        CoreResponseDTO respuestaComercio = new CoreResponseDTO();
-        respuestaComercio.setTransaccionExitosa(true);
-        respuestaComercio.setCodigoAutorizacion("COM456");
-        respuestaComercio.setMensaje("Crédito procesado correctamente");
-        respuestaComercio.setEstado("APROBADA");
+        CoreResponseDTO respuestaCuenta = CoreResponseDTO.builder()
+                .estado("APROBADO")
+                .mensaje("Crédito procesado correctamente")
+                .codigoRespuesta("00")
+                .codigoTransaccion("COM456")
+                .build();
         
-        wireMockServer.stubFor(WireMock.post(WireMock.urlEqualTo("/api/v1/transacciones/comercio"))
+        wireMockServer.stubFor(WireMock.post(WireMock.urlEqualTo("/v1/transacciones/cuenta"))
                 .willReturn(WireMock.aResponse()
                         .withStatus(200)
                         .withHeader("Content-Type", "application/json")
-                        .withBody(objectMapper.writeValueAsString(respuestaComercio))));
+                        .withBody(objectMapper.writeValueAsString(respuestaCuenta))));
         
         TransaccionCoreDTO transaccionDTO = new TransaccionCoreDTO();
+        transaccionDTO.setCodTransaccion("TRX123456");
+        transaccionDTO.setCodigoUnico("UNIQUE123");
+        transaccionDTO.setCodigoGtw("PAYPAL");
         transaccionDTO.setNumeroTarjeta("4111111111111111");
         transaccionDTO.setCvv("123");
-        transaccionDTO.setFechaCaducidad(LocalDateTime.now().plusYears(2));
+        transaccionDTO.setFechaCaducidad("12/25");
         transaccionDTO.setMonto(new BigDecimal("100.00"));
-        transaccionDTO.setCodigoUnico("UNIQUE123");
-        transaccionDTO.setTipo("CORRIENTE");
-        transaccionDTO.setSwiftBanco("BANQECAA");
+        transaccionDTO.setCodigoMoneda("USD");
+        transaccionDTO.setMarca("VISA");
+        transaccionDTO.setEstado("PEN");
+        transaccionDTO.setTipo("COM");
+        transaccionDTO.setSwiftBancoTarjeta("BANQECAA");
         transaccionDTO.setSwiftBancoComercio("BANQECBB");
         transaccionDTO.setCuentaIbanComercio("ES9121000418450200051332");
         transaccionDTO.setReferencia("REF123456");
-        transaccionDTO.setCodigoComercio("COM001");
+        transaccionDTO.setPais("EC");
         
         mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/core/procesar")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -100,36 +107,42 @@ public class IntegracionCoreBancarioTest {
                 .andExpect(jsonPath("$.estado").value("APROBADA"))
                 .andExpect(jsonPath("$.codigoRespuesta").value("00"));
         
-        wireMockServer.verify(WireMock.postRequestedFor(WireMock.urlEqualTo("/api/v1/transacciones/tarjeta")));
-        wireMockServer.verify(WireMock.postRequestedFor(WireMock.urlEqualTo("/api/v1/transacciones/comercio")));
+        wireMockServer.verify(WireMock.postRequestedFor(WireMock.urlEqualTo("/v1/transacciones/tarjeta")));
+        wireMockServer.verify(WireMock.postRequestedFor(WireMock.urlEqualTo("/v1/transacciones/cuenta")));
     }
     
     @Test
     public void procesarTransaccion_errorEnDebito() throws Exception {
-        CoreResponseDTO respuestaError = new CoreResponseDTO();
-        respuestaError.setTransaccionExitosa(false);
-        respuestaError.setCodigoError("51");
-        respuestaError.setMensaje("Fondos insuficientes");
-        respuestaError.setEstado("RECHAZADA");
+        CoreResponseDTO respuestaError = CoreResponseDTO.builder()
+                .estado("RECHAZADO")
+                .mensaje("Fondos insuficientes")
+                .codigoRespuesta("51")
+                .codigoTransaccion("")
+                .build();
         
-        wireMockServer.stubFor(WireMock.post(WireMock.urlEqualTo("/api/v1/transacciones/tarjeta"))
+        wireMockServer.stubFor(WireMock.post(WireMock.urlEqualTo("/v1/transacciones/tarjeta"))
                 .willReturn(WireMock.aResponse()
                         .withStatus(200)
                         .withHeader("Content-Type", "application/json")
                         .withBody(objectMapper.writeValueAsString(respuestaError))));
         
         TransaccionCoreDTO transaccionDTO = new TransaccionCoreDTO();
+        transaccionDTO.setCodTransaccion("TRX123456");
+        transaccionDTO.setCodigoUnico("UNIQUE456");
+        transaccionDTO.setCodigoGtw("PAYPAL");
         transaccionDTO.setNumeroTarjeta("4111111111111111");
         transaccionDTO.setCvv("123");
-        transaccionDTO.setFechaCaducidad(LocalDateTime.now().plusYears(2));
+        transaccionDTO.setFechaCaducidad("12/25");
         transaccionDTO.setMonto(new BigDecimal("10000.00"));
-        transaccionDTO.setCodigoUnico("UNIQUE456");
-        transaccionDTO.setTipo("CORRIENTE");
-        transaccionDTO.setSwiftBanco("BANQECAA");
+        transaccionDTO.setCodigoMoneda("USD");
+        transaccionDTO.setMarca("VISA");
+        transaccionDTO.setEstado("PEN");
+        transaccionDTO.setTipo("COM");
+        transaccionDTO.setSwiftBancoTarjeta("BANQECAA");
         transaccionDTO.setSwiftBancoComercio("BANQECBB");
         transaccionDTO.setCuentaIbanComercio("ES9121000418450200051332");
         transaccionDTO.setReferencia("REF123456");
-        transaccionDTO.setCodigoComercio("COM001");
+        transaccionDTO.setPais("EC");
         
         mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/core/procesar")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -137,7 +150,7 @@ public class IntegracionCoreBancarioTest {
                 .andExpect(MockMvcResultMatchers.status().isUnprocessableEntity())
                 .andExpect(jsonPath("$.mensaje").value(org.hamcrest.Matchers.containsString("Fondos insuficientes")));
         
-        wireMockServer.verify(WireMock.postRequestedFor(WireMock.urlEqualTo("/api/v1/transacciones/tarjeta")));
-        wireMockServer.verify(0, WireMock.postRequestedFor(WireMock.urlEqualTo("/api/v1/transacciones/comercio")));
+        wireMockServer.verify(WireMock.postRequestedFor(WireMock.urlEqualTo("/v1/transacciones/tarjeta")));
+        wireMockServer.verify(0, WireMock.postRequestedFor(WireMock.urlEqualTo("/v1/transacciones/cuenta")));
     }
 } 

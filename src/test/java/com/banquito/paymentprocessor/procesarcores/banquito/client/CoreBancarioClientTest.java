@@ -1,15 +1,17 @@
 package com.banquito.paymentprocessor.procesarcores.banquito.client;
 
-import static org.junit.jupiter.api.Assertions.*;
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -17,12 +19,8 @@ import org.springframework.test.context.DynamicPropertySource;
 import com.banquito.paymentprocessor.procesarcores.banquito.client.dto.ComercioRequestDTO;
 import com.banquito.paymentprocessor.procesarcores.banquito.client.dto.CoreResponseDTO;
 import com.banquito.paymentprocessor.procesarcores.banquito.client.dto.TarjetaRequestDTO;
-import com.banquito.paymentprocessor.procesarcores.banquito.exception.CoreProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
-
-import org.junit.jupiter.api.extension.RegisterExtension;
-import org.springframework.http.MediaType;
 
 @SpringBootTest
 @ActiveProfiles("test")
@@ -39,7 +37,7 @@ public class CoreBancarioClientTest {
 
     @DynamicPropertySource
     static void configurarPropiedades(DynamicPropertyRegistry registry) {
-        registry.add("core.bancario.url", () -> wireMockServer.baseUrl());
+        registry.add("app.core-bancario.url", () -> wireMockServer.baseUrl());
     }
 
     @BeforeEach
@@ -49,117 +47,143 @@ public class CoreBancarioClientTest {
 
     @Test
     public void procesarTransaccionTarjeta_respuestaExitosa() throws Exception {
-        CoreResponseDTO respuestaExitosa = new CoreResponseDTO();
-        respuestaExitosa.setTransaccionExitosa(true);
-        respuestaExitosa.setCodigoAutorizacion("AUTH123");
-        respuestaExitosa.setMensaje("Transacción aprobada");
-        respuestaExitosa.setEstado("APROBADA");
+        CoreResponseDTO respuestaExitosa = CoreResponseDTO.builder()
+                .estado("APROBADO")
+                .mensaje("Transacción aprobada")
+                .codigoRespuesta("00")
+                .codigoTransaccion("AUTH123")
+                .build();
 
-        wireMockServer.stubFor(post(urlEqualTo("/api/v1/transacciones/tarjeta"))
+        wireMockServer.stubFor(post(urlEqualTo("/v1/transacciones/tarjeta"))
                 .willReturn(aResponse()
                         .withStatus(200)
                         .withHeader("Content-Type", "application/json")
                         .withBody(objectMapper.writeValueAsString(respuestaExitosa))));
 
-        TarjetaRequestDTO requestDTO = new TarjetaRequestDTO();
-        requestDTO.setNumeroTarjeta("4111111111111111");
-        requestDTO.setCvv("123");
-        requestDTO.setFechaCaducidad(LocalDateTime.now().plusYears(2));
-        requestDTO.setMonto(new BigDecimal("100.00"));
-        requestDTO.setReferencia("REF123456");
+        TarjetaRequestDTO requestDTO = TarjetaRequestDTO.builder()
+                .numeroTarjeta("4111111111111111")
+                .tipo("COMPRA")
+                .monto(new BigDecimal("100.00"))
+                .moneda("USD")
+                .pais("ECU")
+                .swift("BANECUXXXX")
+                .codigoUnicoTransaccion("TX123456")
+                .referencia("REF123456")
+                .transaccionEncriptada("TX123456")
+                .diferido(false)
+                .cuotas(1)
+                .build();
 
-        CoreResponseDTO resultado = coreBancarioClient.procesarTransaccionTarjeta(requestDTO);
+        ResponseEntity<CoreResponseDTO> respuesta = coreBancarioClient.procesarTransaccionTarjeta(requestDTO);
 
-        assertNotNull(resultado);
-        assertTrue(resultado.getTransaccionExitosa());
-        assertEquals("AUTH123", resultado.getCodigoAutorizacion());
-        assertEquals("APROBADA", resultado.getEstado());
+        assertNotNull(respuesta);
+        assertNotNull(respuesta.getBody());
+        assertEquals("APROBADO", respuesta.getBody().getEstado());
+        assertEquals("Transacción aprobada", respuesta.getBody().getMensaje());
+        assertEquals("00", respuesta.getBody().getCodigoRespuesta());
     }
 
     @Test
-    public void procesarTransaccionComercio_respuestaExitosa() throws Exception {
-        CoreResponseDTO respuestaExitosa = new CoreResponseDTO();
-        respuestaExitosa.setTransaccionExitosa(true);
-        respuestaExitosa.setCodigoAutorizacion("AUTH456");
-        respuestaExitosa.setMensaje("Crédito aprobado");
-        respuestaExitosa.setEstado("APROBADA");
+    public void procesarTransaccionCuenta_respuestaExitosa() throws Exception {
+        CoreResponseDTO respuestaExitosa = CoreResponseDTO.builder()
+                .estado("APROBADO")
+                .mensaje("Crédito aprobado")
+                .codigoRespuesta("00")
+                .codigoTransaccion("AUTH456")
+                .build();
 
-        wireMockServer.stubFor(post(urlEqualTo("/api/v1/transacciones/comercio"))
+        wireMockServer.stubFor(post(urlEqualTo("/v1/transacciones/cuenta"))
                 .willReturn(aResponse()
                         .withStatus(200)
                         .withHeader("Content-Type", "application/json")
                         .withBody(objectMapper.writeValueAsString(respuestaExitosa))));
 
-        ComercioRequestDTO requestDTO = new ComercioRequestDTO();
-        requestDTO.setCodigoComercio("COM001");
-        requestDTO.setMonto(new BigDecimal("100.00"));
-        requestDTO.setCuentaIbanComercio("ES9121000418450200051332");
-        requestDTO.setSwiftBancoComercio("BANQECAA");
-        requestDTO.setReferencia("REF123456");
+        ComercioRequestDTO requestDTO = ComercioRequestDTO.builder()
+                .iban("ES9121000418450200051332")
+                .swift("BANQECAA")
+                .tipo("COMPRA")
+                .codigoUnico("TX123456")
+                .monto(new BigDecimal("100.00"))
+                .referencia("REF123456")
+                .build();
 
-        CoreResponseDTO resultado = coreBancarioClient.procesarTransaccionComercio(requestDTO);
+        ResponseEntity<CoreResponseDTO> respuesta = coreBancarioClient.procesarTransaccionCuenta(requestDTO);
 
-        assertNotNull(resultado);
-        assertTrue(resultado.getTransaccionExitosa());
-        assertEquals("AUTH456", resultado.getCodigoAutorizacion());
-        assertEquals("APROBADA", resultado.getEstado());
+        assertNotNull(respuesta);
+        assertNotNull(respuesta.getBody());
+        assertEquals("APROBADO", respuesta.getBody().getEstado());
+        assertEquals("Crédito aprobado", respuesta.getBody().getMensaje());
+        assertEquals("00", respuesta.getBody().getCodigoRespuesta());
     }
 
     @Test
     public void procesarTransaccionTarjeta_respuestaError() throws Exception {
-        CoreResponseDTO respuestaError = new CoreResponseDTO();
-        respuestaError.setTransaccionExitosa(false);
-        respuestaError.setCodigoError("51");
-        respuestaError.setMensaje("Fondos insuficientes");
-        respuestaError.setEstado("RECHAZADA");
+        CoreResponseDTO respuestaError = CoreResponseDTO.builder()
+                .estado("RECHAZADO")
+                .mensaje("Fondos insuficientes")
+                .codigoRespuesta("51")
+                .codigoTransaccion("")
+                .build();
 
-        wireMockServer.stubFor(post(urlEqualTo("/api/v1/transacciones/tarjeta"))
+        wireMockServer.stubFor(post(urlEqualTo("/v1/transacciones/tarjeta"))
                 .willReturn(aResponse()
                         .withStatus(200)
                         .withHeader("Content-Type", "application/json")
                         .withBody(objectMapper.writeValueAsString(respuestaError))));
 
-        TarjetaRequestDTO requestDTO = new TarjetaRequestDTO();
-        requestDTO.setNumeroTarjeta("4111111111111111");
-        requestDTO.setCvv("123");
-        requestDTO.setFechaCaducidad(LocalDateTime.now().plusYears(2));
-        requestDTO.setMonto(new BigDecimal("10000.00"));
-        requestDTO.setReferencia("REF123456");
+        TarjetaRequestDTO requestDTO = TarjetaRequestDTO.builder()
+                .numeroTarjeta("4111111111111111")
+                .tipo("COMPRA")
+                .monto(new BigDecimal("10000.00"))
+                .moneda("USD")
+                .pais("ECU")
+                .swift("BANECUXXXX")
+                .codigoUnicoTransaccion("TX123456")
+                .referencia("REF123456")
+                .transaccionEncriptada("TX123456")
+                .diferido(false)
+                .cuotas(1)
+                .build();
 
-        CoreResponseDTO resultado = coreBancarioClient.procesarTransaccionTarjeta(requestDTO);
+        ResponseEntity<CoreResponseDTO> respuesta = coreBancarioClient.procesarTransaccionTarjeta(requestDTO);
 
-        assertNotNull(resultado);
-        assertFalse(resultado.getTransaccionExitosa());
-        assertEquals("51", resultado.getCodigoError());
-        assertEquals("RECHAZADA", resultado.getEstado());
+        assertNotNull(respuesta);
+        assertNotNull(respuesta.getBody());
+        assertEquals("RECHAZADO", respuesta.getBody().getEstado());
+        assertEquals("Fondos insuficientes", respuesta.getBody().getMensaje());
+        assertEquals("51", respuesta.getBody().getCodigoRespuesta());
     }
 
     @Test
-    public void procesarTransaccionComercio_respuestaError() throws Exception {
-        CoreResponseDTO respuestaError = new CoreResponseDTO();
-        respuestaError.setTransaccionExitosa(false);
-        respuestaError.setCodigoError("15");
-        respuestaError.setMensaje("Cuenta de comercio inválida");
-        respuestaError.setEstado("RECHAZADA");
+    public void procesarTransaccionCuenta_respuestaError() throws Exception {
+        CoreResponseDTO respuestaError = CoreResponseDTO.builder()
+                .estado("RECHAZADO")
+                .mensaje("Cuenta de comercio inválida")
+                .codigoRespuesta("15")
+                .codigoTransaccion("")
+                .build();
 
-        wireMockServer.stubFor(post(urlEqualTo("/api/v1/transacciones/comercio"))
+        wireMockServer.stubFor(post(urlEqualTo("/v1/transacciones/cuenta"))
                 .willReturn(aResponse()
                         .withStatus(200)
                         .withHeader("Content-Type", "application/json")
                         .withBody(objectMapper.writeValueAsString(respuestaError))));
 
-        ComercioRequestDTO requestDTO = new ComercioRequestDTO();
-        requestDTO.setCodigoComercio("COM001");
-        requestDTO.setMonto(new BigDecimal("100.00"));
-        requestDTO.setCuentaIbanComercio("ES9121000418450200999999");
-        requestDTO.setSwiftBancoComercio("BANQECAA");
-        requestDTO.setReferencia("REF123456");
+        ComercioRequestDTO requestDTO = ComercioRequestDTO.builder()
+                .iban("ES9121000418450200999999")
+                .swift("BANQECAA")
+                .tipo("COMPRA")
+                .codigoUnico("TX123456")
+                .monto(new BigDecimal("100.00"))
+                .referencia("REF123456")
+                .build();
 
-        CoreResponseDTO resultado = coreBancarioClient.procesarTransaccionComercio(requestDTO);
+        ResponseEntity<CoreResponseDTO> respuesta = coreBancarioClient.procesarTransaccionCuenta(requestDTO);
 
-        assertNotNull(resultado);
-        assertFalse(resultado.getTransaccionExitosa());
-        assertEquals("15", resultado.getCodigoError());
-        assertEquals("RECHAZADA", resultado.getEstado());
+        assertNotNull(respuesta);
+        assertNotNull(respuesta.getBody());
+        assertEquals("RECHAZADO", respuesta.getBody().getEstado());
+        assertEquals("Cuenta de comercio inválida", respuesta.getBody().getMensaje());
+        assertEquals("15", respuesta.getBody().getCodigoRespuesta());
     }
 } 

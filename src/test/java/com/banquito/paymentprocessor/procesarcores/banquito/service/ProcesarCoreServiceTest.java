@@ -13,6 +13,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import com.banquito.paymentprocessor.procesarcores.banquito.client.CoreBancarioClient;
@@ -42,79 +43,92 @@ public class ProcesarCoreServiceTest {
 
     @Test
     public void procesarTransaccion_exitoso() {
-        CoreResponseDTO coreResponseExitoso = new CoreResponseDTO();
-        coreResponseExitoso.setTransaccionExitosa(true);
-        coreResponseExitoso.setCodigoAutorizacion("AUTH123");
-        coreResponseExitoso.setMensaje("Transacción exitosa");
-        coreResponseExitoso.setEstado("APROBADA");
-
+        CoreResponseDTO coreResponseExitoso = CoreResponseDTO.builder()
+                .estado("APROBADO")
+                .mensaje("Transacción exitosa")
+                .codigoRespuesta("00")
+                .codigoTransaccion("AUTH123")
+                .build();
+                
+        ResponseEntity<CoreResponseDTO> responseEntity = ResponseEntity.ok(coreResponseExitoso);
+                
         when(coreBancarioClient.procesarTransaccionTarjeta(any(TarjetaRequestDTO.class)))
-                .thenReturn(coreResponseExitoso);
-        when(coreBancarioClient.procesarTransaccionComercio(any(ComercioRequestDTO.class)))
-                .thenReturn(coreResponseExitoso);
+                .thenReturn(responseEntity);
+        when(coreBancarioClient.procesarTransaccionCuenta(any(ComercioRequestDTO.class)))
+                .thenReturn(responseEntity);
 
         TransaccionCoreDTO transaccionDTO = crearTransaccionDTOPrueba();
         TransaccionCoreResponseDTO resultado = service.procesarTransaccion(transaccionDTO);
 
         assertNotNull(resultado);
-        assertEquals("APROBADA", resultado.getEstado());
-        assertEquals("00", resultado.getCodigoRespuesta());
-        assertTrue(resultado.getMensaje().contains("exitosa"));
+        assertEquals("APROBADO", resultado.getEstado());
+        assertTrue(resultado.getMensaje().contains("correctamente"));
 
         verify(coreBancarioClient, times(1)).procesarTransaccionTarjeta(any(TarjetaRequestDTO.class));
-        verify(coreBancarioClient, times(1)).procesarTransaccionComercio(any(ComercioRequestDTO.class));
+        verify(coreBancarioClient, times(1)).procesarTransaccionCuenta(any(ComercioRequestDTO.class));
     }
 
     @Test
     public void procesarTransaccion_errorEnDebitoTarjeta() {
-        CoreResponseDTO coreResponseError = new CoreResponseDTO();
-        coreResponseError.setTransaccionExitosa(false);
-        coreResponseError.setCodigoError("51");
-        coreResponseError.setMensaje("Fondos insuficientes");
-        coreResponseError.setEstado("RECHAZADA");
+        CoreResponseDTO coreResponseError = CoreResponseDTO.builder()
+                .estado("RECHAZADO")
+                .mensaje("Fondos insuficientes")
+                .codigoRespuesta("51")
+                .codigoTransaccion("")
+                .build();
+                
+        ResponseEntity<CoreResponseDTO> responseEntity = ResponseEntity.ok(coreResponseError);
 
         when(coreBancarioClient.procesarTransaccionTarjeta(any(TarjetaRequestDTO.class)))
-                .thenReturn(coreResponseError);
+                .thenReturn(responseEntity);
 
         TransaccionCoreDTO transaccionDTO = crearTransaccionDTOPrueba();
 
-        CoreProcessingException exception = assertThrows(CoreProcessingException.class, () -> {
-            service.procesarTransaccion(transaccionDTO);
-        });
+        TransaccionCoreResponseDTO resultado = service.procesarTransaccion(transaccionDTO);
 
-        assertTrue(exception.getMessage().contains("Fondos insuficientes"));
+        assertNotNull(resultado);
+        assertEquals("RECHAZADO", resultado.getEstado());
+        assertTrue(resultado.getMensaje().contains("Fondos insuficientes"));
+
         verify(coreBancarioClient, times(1)).procesarTransaccionTarjeta(any(TarjetaRequestDTO.class));
-        verify(coreBancarioClient, never()).procesarTransaccionComercio(any(ComercioRequestDTO.class));
+        verify(coreBancarioClient, never()).procesarTransaccionCuenta(any(ComercioRequestDTO.class));
     }
 
     @Test
     public void procesarTransaccion_errorEnCreditoComercio() {
-        CoreResponseDTO coreResponseExitoso = new CoreResponseDTO();
-        coreResponseExitoso.setTransaccionExitosa(true);
-        coreResponseExitoso.setCodigoAutorizacion("AUTH123");
-        coreResponseExitoso.setMensaje("Transacción exitosa");
-        coreResponseExitoso.setEstado("APROBADA");
-        
-        CoreResponseDTO coreResponseError = new CoreResponseDTO();
-        coreResponseError.setTransaccionExitosa(false);
-        coreResponseError.setCodigoError("15");
-        coreResponseError.setMensaje("Error en comercio");
-        coreResponseError.setEstado("RECHAZADA");
-
-        when(coreBancarioClient.procesarTransaccionTarjeta(any(TarjetaRequestDTO.class)))
-                .thenReturn(coreResponseExitoso);
+        CoreResponseDTO coreResponseExitoso = CoreResponseDTO.builder()
+                .estado("APROBADO")
+                .mensaje("Transacción exitosa")
+                .codigoRespuesta("00")
+                .codigoTransaccion("AUTH123")
+                .build();
                 
-        when(coreBancarioClient.procesarTransaccionComercio(any(ComercioRequestDTO.class)))
-                .thenReturn(coreResponseError);
+        CoreResponseDTO coreResponseError = CoreResponseDTO.builder()
+                .estado("RECHAZADO")
+                .mensaje("Error en cuenta de comercio")
+                .codigoRespuesta("15")
+                .codigoTransaccion("")
+                .build();
+                
+        ResponseEntity<CoreResponseDTO> responseExitoso = ResponseEntity.ok(coreResponseExitoso);
+        ResponseEntity<CoreResponseDTO> responseError = ResponseEntity.ok(coreResponseError);
+                
+        when(coreBancarioClient.procesarTransaccionTarjeta(any(TarjetaRequestDTO.class)))
+                .thenReturn(responseExitoso);
+                
+        when(coreBancarioClient.procesarTransaccionCuenta(any(ComercioRequestDTO.class)))
+                .thenReturn(responseError);
 
         TransaccionCoreDTO transaccionDTO = crearTransaccionDTOPrueba();
 
-        CoreProcessingException exception = assertThrows(CoreProcessingException.class, () -> {
-            service.procesarTransaccion(transaccionDTO);
-        });
+        TransaccionCoreResponseDTO resultado = service.procesarTransaccion(transaccionDTO);
+
+        assertNotNull(resultado);
+        assertEquals("RECHAZADO", resultado.getEstado());
+        assertTrue(resultado.getMensaje().contains("Error en cuenta de comercio"));
 
         verify(coreBancarioClient, times(1)).procesarTransaccionTarjeta(any(TarjetaRequestDTO.class));
-        verify(coreBancarioClient, times(1)).procesarTransaccionComercio(any(ComercioRequestDTO.class));
+        verify(coreBancarioClient, times(1)).procesarTransaccionCuenta(any(ComercioRequestDTO.class));
     }
 
     @Test
@@ -123,27 +137,30 @@ public class ProcesarCoreServiceTest {
                 .thenThrow(new RuntimeException("Error de conexión"));
 
         TransaccionCoreDTO transaccionDTO = crearTransaccionDTOPrueba();
+        TransaccionCoreResponseDTO resultado = service.procesarTransaccion(transaccionDTO);
 
-        CoreProcessingException exception = assertThrows(CoreProcessingException.class, () -> {
-            service.procesarTransaccion(transaccionDTO);
-        });
-
-        assertTrue(exception.getMessage().contains("Error"));
+        assertNotNull(resultado);
+        assertEquals("RECHAZADO", resultado.getEstado());
+        assertTrue(resultado.getMensaje().contains("Error de conexión"));
     }
 
     private TransaccionCoreDTO crearTransaccionDTOPrueba() {
         TransaccionCoreDTO dto = new TransaccionCoreDTO();
+        dto.setCodTransaccion("TRX123456");
+        dto.setCodigoUnico("UNIQUE123");
+        dto.setCodigoGtw("PAYPAL");
         dto.setNumeroTarjeta("4111111111111111");
         dto.setCvv("123");
-        dto.setFechaCaducidad(LocalDateTime.now().plusYears(2));
+        dto.setFechaCaducidad("12/25");
         dto.setMonto(new BigDecimal("100.00"));
-        dto.setCodigoUnico("UNIQUE123");
-        dto.setTipo("CORRIENTE");
-        dto.setSwiftBanco("BANQECAA");
+        dto.setCodigoMoneda("USD");
+        dto.setTipo("COM");
+        dto.setSwiftBancoTarjeta("BANQECAA");
         dto.setSwiftBancoComercio("BANQECBB");
         dto.setCuentaIbanComercio("ES9121000418450200051332");
         dto.setReferencia("REF123456");
-        dto.setCodigoComercio("COM001");
+        dto.setPais("EC");
+        dto.setMarca("VISA");
         return dto;
     }
 } 
