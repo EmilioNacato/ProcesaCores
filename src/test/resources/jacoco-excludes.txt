@@ -1,0 +1,8 @@
+# Clases de configuración
+com/banquito/paymentprocessor/procesarcores/banquito/config/*
+# Clases de modelo
+com/banquito/paymentprocessor/procesarcores/banquito/model/*
+# Clases DTO
+com/banquito/paymentprocessor/procesarcores/banquito/dto/*
+# Clase principal de la aplicación
+com/banquito/paymentprocessor/procesarcores/banquito/BanquitoApplication.class 
